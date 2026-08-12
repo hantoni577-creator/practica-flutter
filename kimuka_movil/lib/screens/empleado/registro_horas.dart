@@ -1,0 +1,189 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/api_client.dart';
+import '../../models/jornada.dart';
+import '../../state/auth_provider.dart';
+import '../../theme/app_theme.dart';
+
+class RegistroHorasScreen extends StatefulWidget {
+  const RegistroHorasScreen({super.key});
+
+  @override
+  State<RegistroHorasScreen> createState() => _RegistroHorasScreenState();
+}
+
+class _RegistroHorasScreenState extends State<RegistroHorasScreen> {
+  bool _enviando = false;
+  Jornada? _activa;
+
+  @override
+  void initState() {
+    super.initState();
+    _buscarActiva();
+  }
+
+  Future<void> _buscarActiva() async {
+    try {
+      final api = context.read<ApiClient>();
+      final jornadas = await api.listarJornadas();
+      if (!mounted) return;
+      setState(() {
+        _activa = jornadas
+            .map((j) => Jornada.fromJson(j as Map<String, dynamic>))
+            .where((j) => j.activa)
+            .firstOrNull;
+      });
+    } catch (_) {
+      // Si no se puede consultar, se permite intentar iniciar.
+    }
+  }
+
+  Future<void> _iniciar() async {
+    if (_activa != null) {
+      _mostrar('Ya tienes una jornada activa. Finalízala antes de iniciar otra.');
+      return;
+    }
+    setState(() => _enviando = true);
+    try {
+      final api = context.read<ApiClient>();
+      final user = context.read<AuthProvider>().user;
+      if (user == null) throw ApiException('Sesión no válida');
+      final ahora = DateTime.now();
+      await api.crearJornada({
+        'idUsuario_Empleado': user.idUsuario,
+        'fecha': DateFormat('yyyy-MM-dd').format(ahora),
+        'hInicio': DateFormat('HH:mm').format(ahora),
+      });
+      _mostrar('Jornada iniciada correctamente.');
+      await _buscarActiva();
+    } on ApiException catch (e) {
+      _mostrar(e.message);
+    } catch (_) {
+      _mostrar('No se pudo conectar con el servidor');
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
+  }
+
+  Future<void> _finalizar() async {
+    setState(() => _enviando = true);
+    try {
+      final api = context.read<ApiClient>();
+      final ahora = DateTime.now();
+      await api.finalizarJornada(_activa!.idJornada, {
+        'hFin': DateFormat('HH:mm').format(ahora),
+      });
+      _mostrar('Jornada finalizada correctamente.');
+      await _buscarActiva();
+    } on ApiException catch (e) {
+      _mostrar(e.message);
+    } catch (_) {
+      _mostrar('No se pudo conectar con el servidor');
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
+  }
+
+  void _mostrar(String mensaje) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(mensaje)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final nombre =
+        (context.watch<AuthProvider>().user?.nombre ?? 'EMPLEADO').toUpperCase();
+    final ahora = DateTime.now();
+    final fecha = DateFormat('yyyy-MM-dd').format(ahora);
+    final hora = DateFormat('HH:mm').format(ahora);
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          nombre,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.primario,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                const Text(
+                  'Fecha',
+                  style: TextStyle(color: AppTheme.textoSecundario),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  fecha,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Hora actual',
+                  style: TextStyle(color: AppTheme.textoSecundario),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  hora,
+                  style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.acento,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                if (_activa != null)
+                  Column(
+                    children: [
+                      Chip(
+                        avatar: const Icon(Icons.play_circle,
+                            color: AppTheme.exito, size: 18),
+                        label: const Text('Jornada en curso'),
+                        backgroundColor: const Color(0xFFE8F5E9),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Entrada: ${_activa!.hInicio}',
+                        style: const TextStyle(
+                            color: AppTheme.textoSecundario),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _enviando ? null : _finalizar,
+                        icon: const Icon(Icons.stop_circle),
+                        label: const Text('Finalizar jornada'),
+                      ),
+                    ],
+                  )
+                else
+                  ElevatedButton.icon(
+                    onPressed: _enviando ? null : _iniciar,
+                    icon: const Icon(Icons.login),
+                    label: const Text('Registrar entrada de jornada'),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Al cerrar sesión podrás registrar tu hora de salida.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppTheme.textoSecundario),
+        ),
+      ],
+    );
+  }
+}
