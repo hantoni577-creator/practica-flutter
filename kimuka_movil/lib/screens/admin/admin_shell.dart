@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/auth_provider.dart';
+import '../../state/horas_provider.dart';
+import '../../state/pagos_provider.dart';
+import '../../state/inventario_provider.dart';
+
 import 'admin_horas.dart';
 import 'admin_pagos.dart';
 import 'aprobar_pago.dart';
@@ -28,6 +32,24 @@ class AdminShell extends StatefulWidget {
 }
 
 class _AdminShellState extends State<AdminShell> {
+
+  // ==========================================
+  // INICIO DE LA MEJORA (Precarga de datos)
+  // ==========================================
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Dispara la carga de datos en segundo plano para que al entrar a los módulos ya estén listos
+      context.read<PagosProvider>().fetchPagosPendientes();
+      context.read<HorasProvider>().fetchHorasAdmin();
+      context.read<InventarioProvider>().fetchInventario();
+    });
+  }
+  // ==========================================
+  // FIN DE LA MEJORA
+  // ==========================================
+
   void _ir(Widget pantalla) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => pantalla));
   }

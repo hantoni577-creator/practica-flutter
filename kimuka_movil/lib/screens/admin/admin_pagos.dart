@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/api_client.dart';
 import '../../models/pago.dart';
+import '../../state/pagos_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/formato.dart';
 import '../../widgets/common.dart';
@@ -15,47 +15,43 @@ class AdminPagosScreen extends StatefulWidget {
 }
 
 class _AdminPagosScreenState extends State<AdminPagosScreen> {
-  late Future<List<Pago>> _futuro;
-
   @override
   void initState() {
     super.initState();
-    _futuro = _cargar();
-  }
-
-  Future<List<Pago>> _cargar() async {
-    final api = context.read<ApiClient>();
-    final data = await api.listarPagos();
-    return data
-        .map((p) => Pago.fromJson(p as Map<String, dynamic>))
-        .toList();
+    // Carga los datos al entrar si aún no están en memoria
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PagosProvider>().fetchPagos();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    // Escucha activamente los cambios del Provider
+    final pagosProv = context.watch<PagosProvider>();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Pagos')),
-      body: FutureBuilder<List<Pago>>(
-        future: _futuro,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
+      body: Builder(
+        builder: (context) {
+          if (pagosProv.isLoading && pagosProv.pagos.isEmpty) {
             return const Cargando();
           }
-          if (snapshot.hasError) {
+
+          if (pagosProv.error != null && pagosProv.pagos.isEmpty) {
             return VistaError(
-              mensaje: snapshot.error is ApiException
-                  ? (snapshot.error as ApiException).message
-                  : 'Error al cargar los pagos.',
-              onReintentar: () => setState(() => _futuro = _cargar()),
+              mensaje: pagosProv.error!,
+              onReintentar: () => pagosProv.fetchPagos(),
             );
           }
-          final pagos = snapshot.data!;
+
+          final pagos = pagosProv.pagos;
           double total = 0;
           for (final p in pagos) {
             total += p.montoPagado ?? 0;
           }
+
           return RefreshIndicator(
-            onRefresh: () async => setState(() => _futuro = _cargar()),
+            onRefresh: () => pagosProv.fetchPagos(),
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -89,7 +85,7 @@ class _AdminPagosScreenState extends State<AdminPagosScreen> {
                   const SinDatos()
                 else
                   ...pagos.map(
-                    (p) => Card(
+                        (p) => Card(
                       child: ListTile(
                         leading: const CircleAvatar(
                           backgroundColor: AppTheme.primario,

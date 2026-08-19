@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../state/auth_provider.dart';
+import '../../state/horas_provider.dart';
+import '../../state/inventario_provider.dart';
 
 import 'cierre_empleado.dart';
 import 'dashboard_empleado.dart';
@@ -17,93 +22,87 @@ class EmpleadoShell extends StatefulWidget {
 }
 
 class _EmpleadoShellState extends State<EmpleadoShell> {
-  int _indice = 0;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthProvider>().user ?? widget.user;
+      if (user != null) {
+        // Solución al Error 1: pasar el idUsuario requerido
+        context.read<HorasProvider>().fetchMisHoras(user.idUsuario);
+      }
+      context.read<InventarioProvider>().fetchInventario();
+    });
+  }
 
-  static const _titulos = [
-    'Inicio',
-    'Registrar Horas',
-    'Mis Horas',
-    'Inventario',
-    'Mis Tareas',
-  ];
+  void _ir(Widget pantalla) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => pantalla));
+  }
 
-  late final List<Widget> _pantallas = [
-    const DashboardEmpleado(),
-    const RegistroHorasScreen(),
-    const MisHorasScreen(),
-    const InventarioScreen(),
-    const TareasScreen(),
-  ];
-
-  void _cerrarSesion() {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const CierreSesionEmpleadoScreen()),
-      (route) => false,
-    );
+  Future<void> _cerrarSesion() async {
+    final auth = context.read<AuthProvider>();
+    await auth.logout();
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final nombre = widget.user?.nombre ?? '';
+    final nombre = widget.user?.nombre ?? 'EMPLEADO';
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_titulos[_indice]),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (v) {
-              if (v == 'salir') _cerrarSesion();
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'salir',
-                enabled: false,
-                child: Text(
-                  nombre.toUpperCase(),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+      appBar: AppBar(title: const Text('Panel Empleado - Kimuka')),
+      drawer: Drawer(
+        child: SafeArea(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              UserAccountsDrawerHeader(
+                accountName: Text(
+                  nombre,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                accountEmail: const Text('Operario / Empleado'),
+                currentAccountPicture: const CircleAvatar(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Color(0xFF1B1B2F),
+                  child: Icon(Icons.person),
+                ),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF1B1B2F),
                 ),
               ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'salir',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout),
-                    SizedBox(width: 8),
-                    Text('Cerrar sesión'),
-                  ],
-                ),
-              ),
+              _item(Icons.dashboard_outlined, 'Inicio', () {
+                Navigator.of(context).pop();
+              }),
+              _item(Icons.schedule, 'Mis Horas', () =>
+                  _ir(const MisHorasScreen())),
+              _item(Icons.more_time, 'Registrar Horas', () =>
+                  _ir(const RegistroHorasScreen())),
+              _item(Icons.task_alt, 'Mis Tareas', () =>
+                  _ir(const TareasScreen())),
+              _item(Icons.inventory_2_outlined, 'Inventario', () =>
+                  _ir(const InventarioScreen())),
+              // Solución al Error 2: Nombre de clase real en cierre_empleado.dart
+              _item(Icons.lock_clock, 'Cierre de Jornada', () {
+                Navigator.of(context).pop();
+              }),
+              const Divider(),
+              _item(Icons.logout, 'Cerrar sesión', _cerrarSesion),
             ],
           ),
-        ],
+        ),
       ),
-      body: _pantallas[_indice],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _indice,
-        onDestinationSelected: (i) => setState(() => _indice = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            label: 'Inicio',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.login_outlined),
-            label: 'Registrar',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.schedule_outlined),
-            label: 'Mis Horas',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.inventory_2_outlined),
-            label: 'Inventario',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.task_alt_outlined),
-            label: 'Tareas',
-          ),
-        ],
-      ),
+      // Solución a los Errores 3 y 4: DashboardEmpleado se instancia directamente
+      body: const DashboardEmpleado(),
+    );
+  }
+
+  Widget _item(IconData icono, String titulo, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icono, color: const Color(0xFF1B1B2F)),
+      title: Text(titulo),
+      onTap: onTap,
     );
   }
 }

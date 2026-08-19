@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../models/jornada.dart';
 import '../../state/auth_provider.dart';
+import '../../state/horas_provider.dart';
 import '../../theme/app_theme.dart';
 
 class RegistroHorasScreen extends StatefulWidget {
@@ -26,18 +27,17 @@ class _RegistroHorasScreenState extends State<RegistroHorasScreen> {
 
   Future<void> _buscarActiva() async {
     try {
-      final api = context.read<ApiClient>();
-      final jornadas = await api.listarJornadas();
+      final user = context.read<AuthProvider>().user;
+      if (user != null) {
+        await context.read<HorasProvider>().fetchMisHoras(user.idUsuario);
+      }
       if (!mounted) return;
+
+      final jornadas = context.read<HorasProvider>().jornadas;
       setState(() {
-        _activa = jornadas
-            .map((j) => Jornada.fromJson(j as Map<String, dynamic>))
-            .where((j) => j.activa)
-            .firstOrNull;
+        _activa = jornadas.where((j) => j.activa).firstOrNull;
       });
-    } catch (_) {
-      // Si no se puede consultar, se permite intentar iniciar.
-    }
+    } catch (_) {}
   }
 
   Future<void> _iniciar() async {
@@ -47,17 +47,23 @@ class _RegistroHorasScreenState extends State<RegistroHorasScreen> {
     }
     setState(() => _enviando = true);
     try {
-      final api = context.read<ApiClient>();
       final user = context.read<AuthProvider>().user;
       if (user == null) throw ApiException('Sesión no válida');
       final ahora = DateTime.now();
-      await api.crearJornada({
+
+      final exito = await context.read<HorasProvider>().crearJornada({
         'idUsuario_Empleado': user.idUsuario,
         'fecha': DateFormat('yyyy-MM-dd').format(ahora),
         'hInicio': DateFormat('HH:mm').format(ahora),
-      });
-      _mostrar('Jornada iniciada correctamente.');
-      await _buscarActiva();
+      }, user.idUsuario);
+
+      if (exito) {
+        _mostrar('Jornada iniciada correctamente.');
+        await _buscarActiva();
+      } else {
+        final errorMsg = context.read<HorasProvider>().error;
+        _mostrar(errorMsg ?? 'No se pudo iniciar la jornada.');
+      }
     } on ApiException catch (e) {
       _mostrar(e.message);
     } catch (_) {
@@ -71,10 +77,17 @@ class _RegistroHorasScreenState extends State<RegistroHorasScreen> {
     setState(() => _enviando = true);
     try {
       final api = context.read<ApiClient>();
+      final user = context.read<AuthProvider>().user;
       final ahora = DateTime.now();
+
       await api.finalizarJornada(_activa!.idJornada, {
         'hFin': DateFormat('HH:mm').format(ahora),
       });
+
+      if (user != null) {
+        await context.read<HorasProvider>().fetchMisHoras(user.idUsuario);
+      }
+
       _mostrar('Jornada finalizada correctamente.');
       await _buscarActiva();
     } on ApiException catch (e) {
@@ -95,10 +108,11 @@ class _RegistroHorasScreenState extends State<RegistroHorasScreen> {
   @override
   Widget build(BuildContext context) {
     final nombre =
-        (context.watch<AuthProvider>().user?.nombre ?? 'EMPLEADO').toUpperCase();
+    (context.watch<AuthProvider>().user?.nombre ?? 'EMPLEADO').toUpperCase();
     final ahora = DateTime.now();
     final fecha = DateFormat('yyyy-MM-dd').format(ahora);
     final hora = DateFormat('HH:mm').format(ahora);
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -147,11 +161,11 @@ class _RegistroHorasScreenState extends State<RegistroHorasScreen> {
                 if (_activa != null)
                   Column(
                     children: [
-                      Chip(
-                        avatar: const Icon(Icons.play_circle,
+                      const Chip(
+                        avatar: Icon(Icons.play_circle,
                             color: AppTheme.exito, size: 18),
-                        label: const Text('Jornada en curso'),
-                        backgroundColor: const Color(0xFFE8F5E9),
+                        label: Text('Jornada en curso'),
+                        backgroundColor: Color(0xFFE8F5E9),
                       ),
                       const SizedBox(height: 12),
                       Text(

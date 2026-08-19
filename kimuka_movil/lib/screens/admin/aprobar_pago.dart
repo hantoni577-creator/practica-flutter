@@ -5,6 +5,7 @@ import '../../core/api_client.dart';
 import '../../models/jornada.dart';
 import '../../models/metodo_pago.dart';
 import '../../state/auth_provider.dart';
+import '../../state/pagos_provider.dart';
 import '../../widgets/common.dart';
 
 class AprobarPagoScreen extends StatefulWidget {
@@ -70,19 +71,25 @@ class _AprobarPagoScreenState extends State<AprobarPagoScreen> {
     }
     setState(() => _enviando = true);
     try {
-      final api = context.read<ApiClient>();
       final user = context.read<AuthProvider>().user;
-      await api.crearPago({
+
+      final exito = await context.read<PagosProvider>().crearPago({
         'idJornada': _idJornada,
         'idUsuario_Admin': user?.idUsuario,
         'montoPagado': monto,
         'idMetodo': _idMetodo,
-        'fechaPago':
-            DateTime.now().toIso8601String().split('T').first,
+        'fechaPago': DateTime.now().toIso8601String().split('T').first,
       });
+
       if (!mounted) return;
-      _mostrar('Pago aprobado correctamente.');
-      Navigator.of(context).pop();
+
+      if (exito) {
+        _mostrar('Pago aprobado correctamente.');
+        Navigator.of(context).pop(); // Al regresar a AdminPagosScreen, la lista ya se habrá actualizado
+      } else {
+        final errorMsg = context.read<PagosProvider>().error;
+        _mostrar(errorMsg ?? 'No se pudo aprobar el pago.');
+      }
     } on ApiException catch (e) {
       _mostrar(e.message);
     } catch (_) {
@@ -105,59 +112,59 @@ class _AprobarPagoScreenState extends State<AprobarPagoScreen> {
       body: _cargando
           ? const Cargando()
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: _idJornada,
-                    decoration: const InputDecoration(
-                      labelText: 'Jornada asociada *',
-                      prefixIcon: Icon(Icons.schedule),
-                    ),
-                    items: _jornadas
-                        .map((j) => DropdownMenuItem(
-                              value: j.idJornada,
-                              child: Text(
-                                  '${j.nombreEmpleado ?? '---'} • ${j.fecha ?? ''}'),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setState(() => _idJornada = v),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _idMetodo,
-                    decoration: const InputDecoration(
-                      labelText: 'Método de pago *',
-                      prefixIcon: Icon(Icons.account_balance_wallet),
-                    ),
-                    items: _metodos
-                        .map((m) => DropdownMenuItem(
-                              value: m.idMetodo,
-                              child: Text(m.nombreMetodo),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setState(() => _idMetodo = v),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _monto,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Monto a pagar *',
-                      prefixIcon: Icon(Icons.payments_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: _enviando ? null : _aprobar,
-                    icon: const Icon(Icons.check_circle),
-                    label: const Text('Confirmar aprobación'),
-                  ),
-                ],
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: _idJornada,
+              decoration: const InputDecoration(
+                labelText: 'Jornada asociada *',
+                prefixIcon: Icon(Icons.schedule),
+              ),
+              items: _jornadas
+                  .map((j) => DropdownMenuItem(
+                value: j.idJornada,
+                child: Text(
+                    '${j.nombreEmpleado ?? '---'} • ${j.fecha ?? ''}'),
+              ))
+                  .toList(),
+              onChanged: (v) => setState(() => _idJornada = v),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _idMetodo,
+              decoration: const InputDecoration(
+                labelText: 'Método de pago *',
+                prefixIcon: Icon(Icons.account_balance_wallet),
+              ),
+              items: _metodos
+                  .map((m) => DropdownMenuItem(
+                value: m.idMetodo,
+                child: Text(m.nombreMetodo),
+              ))
+                  .toList(),
+              onChanged: (v) => setState(() => _idMetodo = v),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _monto,
+              keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Monto a pagar *',
+                prefixIcon: Icon(Icons.payments_outlined),
               ),
             ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _enviando ? null : _aprobar,
+              icon: const Icon(Icons.check_circle),
+              label: const Text('Confirmar aprobación'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
