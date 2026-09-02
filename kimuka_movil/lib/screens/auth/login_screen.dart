@@ -36,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (ok) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => HomeShell(user: auth.user!)),
-        (route) => false,
+            (route) => false,
       );
     }
   }
@@ -45,6 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     return Scaffold(
+      backgroundColor: AppTheme.bgMain, // Fondo negro premium
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -64,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primario,
+                      color: AppTheme.textPrimary, // Blanco nítido
                       letterSpacing: 3,
                     ),
                   ),
@@ -73,31 +74,34 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Acceso al Sistema',
                     textAlign: TextAlign.center,
                     style:
-                        TextStyle(fontSize: 18, color: AppTheme.textoSecundario),
+                    TextStyle(fontSize: 18, color: AppTheme.textoSecundario),
                   ),
                   const SizedBox(height: 28),
                   TextField(
                     controller: _correo,
+                    style: const TextStyle(color: AppTheme.textPrimary),
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Correo Electrónico',
-                      prefixIcon: Icon(Icons.email_outlined),
+                      prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textoSecundario),
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _password,
                     obscureText: _ocultarPass,
+                    style: const TextStyle(color: AppTheme.textPrimary),
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) => _ingresar(),
                     decoration: InputDecoration(
                       labelText: 'Contraseña',
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textoSecundario),
                       suffixIcon: IconButton(
-                        icon: Icon(_ocultarPass
-                            ? Icons.visibility_off
-                            : Icons.visibility),
+                        icon: Icon(
+                          _ocultarPass ? Icons.visibility_off : Icons.visibility,
+                          color: AppTheme.textoSecundario,
+                        ),
                         onPressed: () =>
                             setState(() => _ocultarPass = !_ocultarPass),
                       ),
@@ -110,11 +114,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: auth.cargando ? null : _ingresar,
                     child: auth.cargando
                         ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.black),
+                    )
                         : const Text('Ingresar de Forma Segura'),
                   ),
                   const SizedBox(height: 16),

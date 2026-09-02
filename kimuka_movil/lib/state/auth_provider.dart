@@ -37,10 +37,12 @@ class AuthProvider extends ChangeNotifier {
     } on ApiException catch (e) {
       _error = e.message;
       return false;
-    } catch (_) {
-      _error = 'No se pudo conectar con el servidor';
+    } catch (e, stack) {
+      print('DETALLE ERROR FLUTTER: $e');
+      print(stack);
+      _error = 'Error: $e';
       return false;
-    } finally {
+    }finally {
       _cargando = false;
       notifyListeners();
     }

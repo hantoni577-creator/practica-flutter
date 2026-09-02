@@ -96,9 +96,12 @@ class ItemMenu extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: AppTheme.primario,
+                backgroundColor: AppTheme.bgInput, // Fondo gris oscuro (#1F1F1F)
                 foregroundColor: Colors.white,
-                child: Icon(icono, color: colorIcono ?? Colors.white),
+                child: Icon(
+                  icono,
+                  color: colorIcono ?? AppTheme.textPrimary, // Icono en blanco o el color asignado
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -110,7 +113,7 @@ class ItemMenu extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.primario,
+                        color: AppTheme.textPrimary, // Texto blanco legible
                       ),
                     ),
                     if (subtitulo != null)
@@ -147,7 +150,7 @@ class TituloSeccion extends StatelessWidget {
         style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: AppTheme.primario,
+          color: AppTheme.textPrimary, // Blanco nítido para títulos de sección
         ),
       ),
     );
