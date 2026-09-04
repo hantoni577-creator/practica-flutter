@@ -32,65 +32,69 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Insumo>>(
-      future: _futuro,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Cargando();
-        }
-        if (snapshot.hasError) {
-          return VistaError(
-            mensaje: snapshot.error is ApiException
-                ? (snapshot.error as ApiException).message
-                : 'Error al cargar el inventario.',
-            onReintentar: () => setState(() => _futuro = _cargar()),
-          );
-        }
-        final insumos = snapshot.data!;
-        return RefreshIndicator(
-          onRefresh: () async => setState(() => _futuro = _cargar()),
-          child: insumos.isEmpty
-              ? ListView(children: const [SinDatos()])
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: insumos.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final insumo = insumos[i];
-                    final cantidad =
-                        insumo.cantidad?.toStringAsFixed(1) ?? 'N/D';
-                    return Card(
-                      child: ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: AppTheme.acento,
-                          foregroundColor: Colors.white,
-                          child: Icon(Icons.inventory_2_outlined),
-                        ),
-                        title: Text(
-                          insumo.nombreInsumo,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primario,
-                          ),
-                        ),
-                        subtitle: Text(
-                          [insumo.nombreCategoria, insumo.nombreUnidad]
-                              .whereType<String>()
-                              .join(' • '),
-                        ),
-                        trailing: Text(
-                          '$cantidad ${insumo.nombreUnidad ?? ''}'.trim(),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.acento,
-                          ),
-                        ),
+    return Scaffold(
+      backgroundColor: AppTheme.bgMain, // Fondo oscuro
+      body: FutureBuilder<List<Insumo>>(
+        future: _futuro,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Cargando();
+          }
+          if (snapshot.hasError) {
+            return VistaError(
+              mensaje: snapshot.error is ApiException
+                  ? (snapshot.error as ApiException).message
+                  : 'Error al cargar el inventario.',
+              onReintentar: () => setState(() => _futuro = _cargar()),
+            );
+          }
+          final insumos = snapshot.data!;
+          return RefreshIndicator(
+            onRefresh: () async => setState(() => _futuro = _cargar()),
+            child: insumos.isEmpty
+                ? ListView(children: const [SinDatos()])
+                : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: insumos.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, i) {
+                final insumo = insumos[i];
+                final cantidad =
+                    insumo.cantidad?.toStringAsFixed(1) ?? 'N/D';
+                return Card(
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: AppTheme.bgInput,
+                      foregroundColor: AppTheme.acento,
+                      child: Icon(Icons.inventory_2_outlined),
+                    ),
+                    title: Text(
+                      insumo.nombreInsumo,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary, // Blanco nítido
                       ),
-                    );
-                  },
-                ),
-        );
-      },
+                    ),
+                    subtitle: Text(
+                      [insumo.nombreCategoria, insumo.nombreUnidad]
+                          .whereType<String>()
+                          .join(' • '),
+                      style: const TextStyle(color: AppTheme.textoSecundario),
+                    ),
+                    trailing: Text(
+                      '$cantidad ${insumo.nombreUnidad ?? ''}'.trim(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.acento,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 }

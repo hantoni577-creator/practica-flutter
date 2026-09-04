@@ -172,7 +172,7 @@ class _ReporteHorasScreenState extends State<ReporteHorasScreen> {
                                 'Total horas registradas',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.primario),
+                                    color: AppTheme.textPrimary),
                               ),
                               Text(
                                 '${totalHoras.toStringAsFixed(1)} h',
@@ -199,7 +199,7 @@ class _ReporteHorasScreenState extends State<ReporteHorasScreen> {
                                     '---',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: AppTheme.primario,
+                                  color: AppTheme.textPrimary,
                                 ),
                               ),
                               subtitle: Text(

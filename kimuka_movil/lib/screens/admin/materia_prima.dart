@@ -124,7 +124,7 @@ class _MateriaPrimaScreenState extends State<MateriaPrimaScreen> {
                             insumo.nombreInsumo,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.primario,
+                              color: AppTheme.textPrimary,
                             ),
                           ),
                           subtitle: Text(

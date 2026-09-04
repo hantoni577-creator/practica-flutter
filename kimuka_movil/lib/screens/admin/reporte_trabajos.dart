@@ -170,7 +170,7 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                                   d['nombreInsumo']?.toString() ?? '---',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.primario,
+                                    color: AppTheme.textPrimary,
                                   ),
                                 ),
                                 subtitle: Text(

@@ -161,6 +161,8 @@ class ApiClient {
   Future<dynamic> desactivarUsuario(String id) =>
       request('/api/usuarios/$id/desactivar', method: 'PUT');
 
+  Future<dynamic> activarUsuario(String id) =>
+      request('/api/usuarios/$id/activar', method: 'PUT');
   // ============================== EMPLEADOS ==============================
 
   Future<List<dynamic>> listarEmpleados() async =>

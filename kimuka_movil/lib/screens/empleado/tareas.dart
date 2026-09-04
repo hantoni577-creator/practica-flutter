@@ -63,76 +63,92 @@ class _TareasScreenState extends State<TareasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Asignacion>>(
-      future: _futuro,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Cargando();
-        }
-        if (snapshot.hasError) {
-          return VistaError(
-            mensaje: snapshot.error is ApiException
-                ? (snapshot.error as ApiException).message
-                : 'Error al cargar tus tareas.',
-            onReintentar: () => setState(() => _futuro = _cargar()),
-          );
-        }
-        final tareas = snapshot.data!;
-        return RefreshIndicator(
-          onRefresh: () async => setState(() => _futuro = _cargar()),
-          child: tareas.isEmpty
-              ? ListView(
-                  children: const [
-                    SinDatos(mensaje: 'No tienes tareas asignadas.')
-                  ],
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: tareas.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final tarea = tareas[i];
-                    final completada = tarea.completada;
-                    return Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: completada
-                              ? AppTheme.exito
-                              : AppTheme.acento,
-                          foregroundColor: Colors.white,
-                          child: Icon(completada
-                              ? Icons.check_circle
-                              : Icons.pending_actions),
-                        ),
-                        title: Text(
-                          tarea.nombreInsumo ?? '---',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primario,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'Cantidad: ${tarea.cantidad?.toStringAsFixed(0) ?? 'N/D'} • ${tarea.fechaAsignacion ?? ''}',
-                        ),
-                        trailing: completada
-                            ? const Chip(
-                                label: Text('Completada'),
-                                backgroundColor: Color(0xFFE8F5E9),
-                                labelStyle: TextStyle(
-                                    color: AppTheme.exito, fontSize: 12),
-                              )
-                            : TextButton(
-                                onPressed: _cambiando
-                                    ? null
-                                    : () => _marcarCompletada(tarea),
-                                child: const Text('Completar'),
-                              ),
+    return Scaffold(
+      backgroundColor: AppTheme.bgMain, // Fondo oscuro
+      body: FutureBuilder<List<Asignacion>>(
+        future: _futuro,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Cargando();
+          }
+          if (snapshot.hasError) {
+            return VistaError(
+              mensaje: snapshot.error is ApiException
+                  ? (snapshot.error as ApiException).message
+                  : 'Error al cargar tus tareas.',
+              onReintentar: () => setState(() => _futuro = _cargar()),
+            );
+          }
+          final tareas = snapshot.data!;
+          return RefreshIndicator(
+            onRefresh: () async => setState(() => _futuro = _cargar()),
+            child: tareas.isEmpty
+                ? ListView(
+              children: const [
+                SinDatos(mensaje: 'No tienes tareas asignadas.')
+              ],
+            )
+                : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: tareas.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, i) {
+                final tarea = tareas[i];
+                final completada = tarea.completada;
+                return Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: completada
+                          ? AppTheme.exito.withValues(alpha: 0.2)
+                          : AppTheme.bgInput,
+                      foregroundColor: completada
+                          ? AppTheme.exito
+                          : AppTheme.acento,
+                      child: Icon(completada
+                          ? Icons.check_circle
+                          : Icons.pending_actions),
+                    ),
+                    title: Text(
+                      tarea.nombreInsumo ?? '---',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary, // Blanco nítido
                       ),
-                    );
-                  },
-                ),
-        );
-      },
+                    ),
+                    subtitle: Text(
+                      'Cantidad: ${tarea.cantidad?.toStringAsFixed(0) ?? 'N/D'} • ${tarea.fechaAsignacion ?? ''}',
+                      style: const TextStyle(color: AppTheme.textoSecundario),
+                    ),
+                    trailing: completada
+                        ? Chip(
+                      label: const Text('Completada'),
+                      backgroundColor: AppTheme.exito.withValues(alpha: 0.2),
+                      side: const BorderSide(color: AppTheme.exito),
+                      labelStyle: const TextStyle(
+                        color: AppTheme.exito,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                        : TextButton(
+                      onPressed: _cambiando
+                          ? null
+                          : () => _marcarCompletada(tarea),
+                      child: const Text(
+                        'Completar',
+                        style: TextStyle(
+                          color: AppTheme.acento,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 }

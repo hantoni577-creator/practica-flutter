@@ -226,7 +226,7 @@ class _AsignarInsumosScreenState extends State<AsignarInsumosScreen> {
                                   a.nombreEmpleado ?? '---',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.primario,
+                                    color: AppTheme.textPrimary,
                                   ),
                                 ),
                                 subtitle: Text(

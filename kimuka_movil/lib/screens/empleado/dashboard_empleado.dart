@@ -28,7 +28,7 @@ class DashboardEmpleado extends StatelessWidget {
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: AppTheme.primario,
+            color: AppTheme.textPrimary,
           ),
         ),
         const SizedBox(height: 4),

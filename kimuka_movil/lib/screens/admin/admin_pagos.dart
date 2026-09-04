@@ -65,7 +65,7 @@ class _AdminPagosScreenState extends State<AdminPagosScreen> {
                           'Total pagado',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.primario,
+                            color: AppTheme.textPrimary,
                           ),
                         ),
                         Text(
@@ -96,7 +96,7 @@ class _AdminPagosScreenState extends State<AdminPagosScreen> {
                           formatearMoneda(p.montoPagado),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.primario,
+                            color: AppTheme.textPrimary,
                           ),
                         ),
                         subtitle: Text(
