@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
@@ -16,20 +17,68 @@ class MateriaPrimaScreen extends StatefulWidget {
 }
 
 class _MateriaPrimaScreenState extends State<MateriaPrimaScreen> {
-  late Future<List<Insumo>> _futuro;
+  final _buscadorCtrl = TextEditingController();
+  List<Insumo> _todosLosInsumos = [];
+  List<Insumo> _insumosFiltrados = [];
+  List<Categoria> _categorias = [];
+  String? _categoriaSeleccionada; // null = Todas las categorías
+  bool _cargando = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _futuro = _cargar();
+    _cargarDatos();
   }
 
-  Future<List<Insumo>> _cargar() async {
-    final api = context.read<ApiClient>();
-    final data = await api.listarInsumos();
-    return data
-        .map((i) => Insumo.fromJson(i as Map<String, dynamic>))
-        .toList();
+  @override
+  void dispose() {
+    _buscadorCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cargarDatos() async {
+    setState(() {
+      _cargando = true;
+      _error = null;
+    });
+
+    try {
+      final api = context.read<ApiClient>();
+      final insumosData = await api.listarInsumos();
+      final categoriasData = await api.listarCategorias();
+
+      if (!mounted) return;
+
+      _todosLosInsumos = insumosData
+          .map((i) => Insumo.fromJson(i as Map<String, dynamic>))
+          .toList();
+
+      _categorias = categoriasData
+          .map((c) => Categoria.fromJson(c as Map<String, dynamic>))
+          .toList();
+
+      _aplicarFiltros();
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Error al cargar los insumos');
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
+  void _aplicarFiltros() {
+    final query = _buscadorCtrl.text.trim().toLowerCase();
+
+    setState(() {
+      _insumosFiltrados = _todosLosInsumos.where((insumo) {
+        final coincideNombre = insumo.nombreInsumo.toLowerCase().contains(query);
+        final coincideCategoria = _categoriaSeleccionada == null ||
+            insumo.idCategoria == _categoriaSeleccionada;
+        return coincideNombre && coincideCategoria;
+      }).toList();
+    });
   }
 
   Future<void> _abrirFormulario({Insumo? insumo}) async {
@@ -38,7 +87,7 @@ class _MateriaPrimaScreenState extends State<MateriaPrimaScreen> {
         builder: (_) => FormularioInsumoScreen(insumo: insumo),
       ),
     );
-    if (mounted) setState(() => _futuro = _cargar());
+    if (mounted) _cargarDatos();
   }
 
   Future<void> _eliminar(Insumo insumo) async {
@@ -46,32 +95,42 @@ class _MateriaPrimaScreenState extends State<MateriaPrimaScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Eliminar insumo'),
-        content: Text('¿Eliminar ${insumo.nombreInsumo}?'),
+        backgroundColor: AppTheme.bgCard,
+        title: const Text('Eliminar insumo', style: TextStyle(color: AppTheme.textPrimary)),
+        content: Text(
+          '¿Deseas eliminar "${insumo.nombreInsumo}" del inventario?',
+          style: const TextStyle(color: AppTheme.textoSecundario),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+            child: const Text('Cancelar', style: TextStyle(color: AppTheme.textoSecundario)),
           ),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.peligro,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(100, 36),
+            ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Eliminar'),
           ),
         ],
       ),
     );
+
     if (ok != true) return;
+
     try {
       await api.eliminarInsumo(insumo.idInsumo);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Insumo eliminado.')),
+        const SnackBar(content: Text('Insumo eliminado del inventario.')),
       );
-      setState(() => _futuro = _cargar());
+      _cargarDatos();
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }
@@ -79,96 +138,181 @@ class _MateriaPrimaScreenState extends State<MateriaPrimaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Materia prima')),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTheme.acento,
-        foregroundColor: Colors.white,
-        onPressed: () => _abrirFormulario(),
-        child: const Icon(Icons.add),
+      backgroundColor: AppTheme.bgMain,
+      appBar: AppBar(
+        title: const Text('Materia Prima'),
+        centerTitle: false,
       ),
-      body: FutureBuilder<List<Insumo>>(
-        future: _futuro,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Cargando();
-          }
-          if (snapshot.hasError) {
-            return VistaError(
-              mensaje: snapshot.error is ApiException
-                  ? (snapshot.error as ApiException).message
-                  : 'Error al cargar los insumos.',
-              onReintentar: () => setState(() => _futuro = _cargar()),
-            );
-          }
-          final insumos = snapshot.data!;
-          return RefreshIndicator(
-            onRefresh: () async => setState(() => _futuro = _cargar()),
-            child: insumos.isEmpty
-                ? ListView(children: const [SinDatos()])
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: insumos.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, i) {
-                      final insumo = insumos[i];
-                      final cantidad =
-                          insumo.cantidad?.toStringAsFixed(1) ?? 'N/D';
-                      return Card(
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            backgroundColor: AppTheme.primario,
-                            foregroundColor: Colors.white,
-                            child: Icon(Icons.inventory_2_outlined),
-                          ),
-                          title: Text(
-                            insumo.nombreInsumo,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textPrimary,
-                            ),
-                          ),
-                          subtitle: Text(
-                            [insumo.nombreCategoria, insumo.nombreUnidad]
-                                .whereType<String>()
-                                .join(' • '),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                cantidad,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.acento,
-                                ),
-                              ),
-                              PopupMenuButton<String>(
-                                onSelected: (v) {
-                                  if (v == 'editar') {
-                                    _abrirFormulario(insumo: insumo);
-                                  } else if (v == 'eliminar') {
-                                    _eliminar(insumo);
-                                  }
-                                },
-                                itemBuilder: (_) => const [
-                                  PopupMenuItem(
-                                    value: 'editar',
-                                    child: Text('Editar'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'eliminar',
-                                    child: Text('Eliminar'),
-                                  ),
-                                ],
-                              ),
-                            ],
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppTheme.acento,
+        foregroundColor: Colors.black,
+        icon: const Icon(Icons.add),
+        label: const Text('Añadir Insumo', style: TextStyle(fontWeight: FontWeight.bold)),
+        onPressed: () => _abrirFormulario(),
+      ),
+      body: _cargando
+          ? const Cargando()
+          : _error != null
+          ? VistaError(mensaje: _error!, onReintentar: _cargarDatos)
+          : RefreshIndicator(
+        onRefresh: _cargarDatos,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Barra de búsqueda y selector de categorías
+            Card(
+              color: AppTheme.bgCard,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: const BorderSide(color: AppTheme.borderColor),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'BUSCAR POR NOMBRE',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1,
+                        color: AppTheme.textoSecundario,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _buscadorCtrl,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      onChanged: (_) => _aplicarFiltros(),
+                      decoration: InputDecoration(
+                        hintText: 'Escriba el nombre...',
+                        prefixIcon: const Icon(Icons.search, color: AppTheme.textoSecundario),
+                        suffixIcon: _buscadorCtrl.text.isNotEmpty
+                            ? IconButton(
+                          icon: const Icon(Icons.clear, color: AppTheme.textoSecundario),
+                          onPressed: () {
+                            _buscadorCtrl.clear();
+                            _aplicarFiltros();
+                          },
+                        )
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'CATEGORÍA',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1,
+                        color: AppTheme.textoSecundario,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String?>(
+                      value: _categoriaSeleccionada,
+                      dropdownColor: AppTheme.bgCard,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.category_outlined, color: AppTheme.textoSecundario),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Todas las categorías'),
+                        ),
+                        ..._categorias.map(
+                              (cat) => DropdownMenuItem<String?>(
+                            value: cat.idCategoria,
+                            child: Text(cat.nombreCategoria),
                           ),
                         ),
-                      );
-                    },
+                      ],
+                      onChanged: (val) {
+                        _categoriaSeleccionada = val;
+                        _aplicarFiltros();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Lista de Insumos
+            if (_insumosFiltrados.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(top: 40),
+                child: SinDatos(mensaje: 'No se encontraron insumos con esos filtros.'),
+              )
+            else
+              ..._insumosFiltrados.map((insumo) {
+                final cantidadStr = insumo.cantidad?.toStringAsFixed(1) ?? '0.0';
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  color: AppTheme.bgCard,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppTheme.borderColor),
                   ),
-          );
-        },
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: AppTheme.bgInput,
+                      child: const Icon(Icons.inventory_2_outlined, color: AppTheme.acento),
+                    ),
+                    title: Text(
+                      insumo.nombreInsumo,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      [insumo.nombreCategoria, insumo.nombreUnidad]
+                          .whereType<String>()
+                          .join(' • '),
+                      style: const TextStyle(color: AppTheme.textoSecundario),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$cantidadStr ${insumo.nombreUnidad ?? ''}'.trim(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppTheme.acento,
+                          ),
+                        ),
+                        PopupMenuButton<String>(
+                          iconColor: AppTheme.textoSecundario,
+                          color: AppTheme.bgCard,
+                          onSelected: (v) {
+                            if (v == 'editar') {
+                              _abrirFormulario(insumo: insumo);
+                            } else if (v == 'eliminar') {
+                              _eliminar(insumo);
+                            }
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(
+                              value: 'editar',
+                              child: Text('Editar', style: TextStyle(color: AppTheme.textPrimary)),
+                            ),
+                            PopupMenuItem(
+                              value: 'eliminar',
+                              child: Text('Eliminar', style: TextStyle(color: AppTheme.peligro)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+          ],
+        ),
       ),
     );
   }
@@ -198,7 +342,7 @@ class _FormularioInsumoScreenState extends State<FormularioInsumoScreen> {
     super.initState();
     final i = widget.insumo;
     _nombre.text = i?.nombreInsumo ?? '';
-    _cantidad.text = i?.cantidad?.toString() ?? '';
+    _cantidad.text = i?.cantidad != null ? i!.cantidad.toString() : '';
     _idCategoria = i?.idCategoria;
     _idUnidad = i?.idUnidad;
     _cargarOpciones();
@@ -235,35 +379,46 @@ class _FormularioInsumoScreenState extends State<FormularioInsumoScreen> {
   }
 
   Future<void> _guardar() async {
-    if (_nombre.text.trim().isEmpty ||
-        _cantidad.text.trim().isEmpty ||
-        _idCategoria == null ||
-        _idUnidad == null) {
-      _mostrar('Completa todos los campos.');
+    final nombre = _nombre.text.trim();
+    final cantidadStr = _cantidad.text.trim();
+
+    if (nombre.isEmpty || _idCategoria == null || _idUnidad == null || cantidadStr.isEmpty) {
+      _mostrar('Completa todos los campos obligatorios (*).');
       return;
     }
+
+    final cantidad = double.tryParse(cantidadStr);
+
+    // Validación estricta: bloquea números negativos o cero
+    if (cantidad == null || cantidad <= 0) {
+      _mostrar('La cantidad debe ser un número mayor a 0.');
+      return;
+    }
+
     setState(() => _enviando = true);
     try {
       final api = context.read<ApiClient>();
       final payload = {
-        'nombreInsumo': _nombre.text.trim(),
+        'nombreInsumo': nombre,
         'idCategoria': _idCategoria,
         'idUnidad': _idUnidad,
-        'cantidad': double.tryParse(_cantidad.text.trim()) ?? 0,
+        'cantidad': cantidad,
       };
+
       if (widget.insumo == null) {
         await api.crearInsumo(payload);
-        _mostrar('Insumo creado correctamente.');
+        _mostrar('Insumo registrado correctamente.');
       } else {
         await api.actualizarInsumo(widget.insumo!.idInsumo, payload);
         _mostrar('Insumo actualizado correctamente.');
       }
+
       if (!mounted) return;
       Navigator.of(context).pop();
     } on ApiException catch (e) {
       _mostrar(e.message);
     } catch (_) {
-      _mostrar('No se pudo conectar con el servidor');
+      _mostrar('No se pudo conectar con el servidor.');
     } finally {
       if (mounted) setState(() => _enviando = false);
     }
@@ -271,85 +426,178 @@ class _FormularioInsumoScreenState extends State<FormularioInsumoScreen> {
 
   void _mostrar(String mensaje) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(mensaje)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
   }
 
   @override
   Widget build(BuildContext context) {
     final esNuevo = widget.insumo == null;
+
     return Scaffold(
-      appBar: AppBar(title: Text(esNuevo ? 'Nuevo insumo' : 'Editar insumo')),
+      backgroundColor: AppTheme.bgMain,
+      appBar: AppBar(
+        title: Text(esNuevo ? 'Registrar Ingreso de Materia Prima' : 'Editar Insumo'),
+      ),
       body: _cargandoOpciones
           ? const Cargando()
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextField(
-                    controller: _nombre,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(
-                      labelText: 'Nombre del insumo *',
-                      prefixIcon: Icon(Icons.inventory_2_outlined),
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 550),
+            child: Card(
+              color: AppTheme.bgCard,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppTheme.borderColor),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'NOMBRE DEL MATERIAL',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1,
+                        color: AppTheme.textoSecundario,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _idCategoria,
-                    decoration: const InputDecoration(
-                      labelText: 'Categoría *',
-                      prefixIcon: Icon(Icons.category_outlined),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _nombre,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        hintText: 'Ej: Tela Algodón',
+                        prefixIcon: Icon(Icons.inventory_2_outlined, color: AppTheme.textoSecundario),
+                      ),
                     ),
-                    items: _categorias
-                        .map((c) => DropdownMenuItem(
-                              value: c.idCategoria,
-                              child: Text(c.nombreCategoria),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setState(() => _idCategoria = v),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _idUnidad,
-                    decoration: const InputDecoration(
-                      labelText: 'Unidad de medida *',
-                      prefixIcon: Icon(Icons.straighten),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'CATEGORÍA',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1,
+                        color: AppTheme.textoSecundario,
+                      ),
                     ),
-                    items: _unidades
-                        .map((u) => DropdownMenuItem(
-                              value: u.idUnidad,
-                              child: Text(u.nombreUnidad),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setState(() => _idUnidad = v),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _cantidad,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Cantidad *',
-                      prefixIcon: Icon(Icons.numbers),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: _idCategoria,
+                      dropdownColor: AppTheme.bgCard,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.category_outlined, color: AppTheme.textoSecundario),
+                      ),
+                      items: _categorias
+                          .map((c) => DropdownMenuItem(
+                        value: c.idCategoria,
+                        child: Text(c.nombreCategoria),
+                      ))
+                          .toList(),
+                      onChanged: (v) => setState(() => _idCategoria = v),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _enviando ? null : _guardar,
-                    child: _enviando
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Guardar'),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    const Text(
+                      'UNIDAD DE MEDIDA',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1,
+                        color: AppTheme.textoSecundario,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: _idUnidad,
+                      dropdownColor: AppTheme.bgCard,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.straighten, color: AppTheme.textoSecundario),
+                      ),
+                      items: _unidades
+                          .map((u) => DropdownMenuItem(
+                        value: u.idUnidad,
+                        child: Text(u.nombreUnidad),
+                      ))
+                          .toList(),
+                      onChanged: (v) => setState(() => _idUnidad = v),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'CANTIDAD INICIAL',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1,
+                        color: AppTheme.textoSecundario,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _cantidad,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        // Permite únicamente números positivos y un punto decimal
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                      ],
+                      decoration: const InputDecoration(
+                        hintText: '0',
+                        prefixIcon: Icon(Icons.numbers, color: AppTheme.textoSecundario),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.textoSecundario,
+                              side: const BorderSide(color: AppTheme.borderColor),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                            ),
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancelar'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.textPrimary,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                            ),
+                            onPressed: _enviando ? null : _guardar,
+                            child: _enviando
+                                ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                            )
+                                : Text(
+                              esNuevo ? 'Registrar en Inventario' : 'Guardar Cambios',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
+          ),
+        ),
+      ),
     );
   }
 }
