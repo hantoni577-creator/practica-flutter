@@ -1,31 +1,24 @@
-import 'dart:io';
-
+// ignore_for_file: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 Future<void> exportarReporte(
-  http.Response res,
-  String nombreBase, {
-  required void Function(String mensaje) onError,
-}) async {
+    http.Response res,
+    String nombreBase, {
+      required void Function(String mensaje) onError,
+    }) async {
   try {
-    final dir = await getApplicationDocumentsDirectory();
-    final archivo = File('${dir.path}/$nombreBase.xlsx');
-    await archivo.writeAsBytes(res.bodyBytes, flush: true);
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [
-          XFile(
-            archivo.path,
-            mimeType:
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          ),
-        ],
-        subject: 'Reporte Kimuka',
-      ),
+    final bytes = res.bodyBytes;
+    final blob = html.Blob(
+      [bytes],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
-  } catch (_) {
-    onError('No se pudo exportar el reporte.');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute('download', '$nombreBase.xlsx')
+      ..click();
+    html.Url.revokeObjectUrl(url);
+  } catch (e) {
+    onError('Error al descargar el archivo Excel: $e');
   }
 }

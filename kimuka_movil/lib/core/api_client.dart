@@ -49,13 +49,12 @@ class ApiClient {
   }
 
   Future<dynamic> request(
-    String endpoint, {
-    String method = 'GET',
-    Map<String, dynamic>? body,
-    Map<String, String>? query,
-  }) async {
-    final uri =
-        Uri.parse('$baseUrl$endpoint').replace(queryParameters: query);
+      String endpoint, {
+        String method = 'GET',
+        Map<String, dynamic>? body,
+        Map<String, String>? query,
+      }) async {
+    final uri = Uri.parse('$baseUrl$endpoint').replace(queryParameters: query);
     final http.Response res;
     switch (method) {
       case 'POST':
@@ -82,15 +81,13 @@ class ApiClient {
   }
 
   Future<http.Response> download(
-    String endpoint, {
-    Map<String, String>? query,
-  }) async {
-    final uri =
-        Uri.parse('$baseUrl$endpoint').replace(queryParameters: query);
+      String endpoint, {
+        Map<String, String>? query,
+      }) async {
+    final uri = Uri.parse('$baseUrl$endpoint').replace(queryParameters: query);
     final res = await _client.get(uri, headers: _headers(json: false));
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw ApiException('Error al descargar (${res.statusCode})',
-          res.statusCode);
+      throw ApiException('Error al descargar (${res.statusCode})', res.statusCode);
     }
     return res;
   }
@@ -107,22 +104,23 @@ class ApiClient {
   }) {
     final q = <String, String>{};
     void add(String k, String? v) {
-      if (v != null && v.isNotEmpty && v != 'todos') q[k] = v;
+      if (v != null && v.isNotEmpty && v.toLowerCase() != 'todos') q[k] = v;
     }
 
     add('mes', mes);
     add('anio', anio);
-    add('idUsuario_Empleado', empleado);
+    add('empleado', empleado);
     add('estado', estado);
     add('categoria', categoria);
     add('cliente', cliente);
     return q.isEmpty ? null : q;
   }
 
-  Map<String, dynamic> _data(dynamic res) => res['data'] as Map<String, dynamic>;
+  Map<String, dynamic> _data(dynamic res) =>
+      res is Map<String, dynamic> ? (res['data'] as Map<String, dynamic>? ?? res) : {};
 
   List<dynamic> _lista(dynamic res) =>
-      res['data'] as List<dynamic>? ?? const [];
+      res is Map<String, dynamic> ? (res['data'] as List<dynamic>? ?? const []) : const [];
 
   // ============================== AUTH ==============================
 
@@ -136,8 +134,7 @@ class ApiClient {
   }
 
   Future<dynamic> recuperarContrasena(String correo) =>
-      request('/api/auth/recuperar-contrasena',
-          method: 'POST', body: {'correo': correo});
+      request('/api/auth/recuperar-contrasena', method: 'POST', body: {'correo': correo});
 
   Future<dynamic> verificarToken() => request('/api/auth/verificar-token');
 
@@ -163,6 +160,7 @@ class ApiClient {
 
   Future<dynamic> activarUsuario(String id) =>
       request('/api/usuarios/$id/activar', method: 'PUT');
+
   // ============================== EMPLEADOS ==============================
 
   Future<List<dynamic>> listarEmpleados() async =>
@@ -198,8 +196,7 @@ class ApiClient {
   Future<List<dynamic>> asignacionesPorEmpleado(String id) async =>
       _lista(await request('/api/asignaciones/empleado/$id'));
 
-  Future<dynamic> cambiarEstadoAsignacion(
-          String id, Map<String, dynamic> data) =>
+  Future<dynamic> cambiarEstadoAsignacion(String id, Map<String, dynamic> data) =>
       request('/api/asignaciones/$id/estado', method: 'PUT', body: data);
 
   // ============================== CATEGORIAS ==============================
@@ -282,25 +279,66 @@ class ApiClient {
     String? anio,
     String? empleado,
   }) async =>
-      _lista(await request('/api/reportes/horas',
-          query: _filtros(mes: mes, anio: anio, empleado: empleado)));
+      _lista(await request(
+        '/api/reportes/horas',
+        query: _filtros(mes: mes, anio: anio, empleado: empleado),
+      ));
 
-  Future<http.Response> exportarHoras({String? mes, String? anio}) =>
-      download('/api/reportes/horas/excel',
-          query: _filtros(mes: mes, anio: anio));
+  Future<http.Response> exportarHoras({
+    String? mes,
+    String? anio,
+    String? empleado,
+  }) =>
+      download(
+        '/api/reportes/horas/excel',
+        query: _filtros(mes: mes, anio: anio, empleado: empleado),
+      );
 
+  /// Retorna el mapa completo con 'asignaciones', 'rankingMateriales', 'rankingEmpleados', etc.
+  Future<Map<String, dynamic>> reporteTrabajosData({
+    String? mes,
+    String? anio,
+    String? empleado,
+    String? estado,
+  }) async {
+    final res = await request(
+      '/api/reportes/trabajos',
+      query: _filtros(mes: mes, anio: anio, empleado: empleado, estado: estado),
+    );
+    return _data(res);
+  }
+
+  /// Mantiene compatibilidad si alguna pantalla antigua espera sólo la lista
   Future<List<dynamic>> reporteTrabajos({
     String? mes,
     String? anio,
     String? empleado,
     String? estado,
-  }) async =>
-      _lista(await request('/api/reportes/trabajos',
-          query: _filtros(mes: mes, anio: anio, empleado: empleado, estado: estado)));
+  }) async {
+    final res = await request(
+      '/api/reportes/trabajos',
+      query: _filtros(mes: mes, anio: anio, empleado: empleado, estado: estado),
+    );
+    if (res is Map<String, dynamic>) {
+      final data = res['data'];
+      if (data is List) return data;
+      if (data is Map && data['asignaciones'] is List) {
+        return data['asignaciones'] as List<dynamic>;
+      }
+    }
+    return const [];
+  }
 
-  Future<http.Response> exportarTrabajos({String? mes, String? anio}) =>
-      download('/api/reportes/trabajos/excel',
-          query: _filtros(mes: mes, anio: anio));
+  Future<http.Response> exportarTrabajos({
+    String? mes,
+    String? anio,
+    String? empleado,
+    String? estado,
+  }) =>
+      download(
+        '/api/reportes/trabajos/excel',
+        query: _filtros(mes: mes, anio: anio, empleado: empleado, estado: estado),
+      );
 
   Future<List<dynamic>> reporteProduccion({
     String? mes,
@@ -308,18 +346,31 @@ class ApiClient {
     String? cliente,
     String? estado,
   }) async =>
-      _lista(await request('/api/reportes/produccion',
-          query: _filtros(mes: mes, anio: anio, cliente: cliente, estado: estado)));
+      _lista(await request(
+        '/api/reportes/produccion',
+        query: _filtros(mes: mes, anio: anio, cliente: cliente, estado: estado),
+      ));
 
-  Future<http.Response> exportarProduccion({String? mes, String? anio}) =>
-      download('/api/reportes/produccion/excel',
-          query: _filtros(mes: mes, anio: anio));
+  Future<http.Response> exportarProduccion({
+    String? mes,
+    String? anio,
+    String? cliente,
+    String? estado,
+  }) =>
+      download(
+        '/api/reportes/produccion/excel',
+        query: _filtros(mes: mes, anio: anio, cliente: cliente, estado: estado),
+      );
 
   Future<List<dynamic>> reporteMateriasPrimas({String? categoria}) async =>
-      _lista(await request('/api/reportes/materias-primas',
-          query: _filtros(categoria: categoria)));
+      _lista(await request(
+        '/api/reportes/materias-primas',
+        query: _filtros(categoria: categoria),
+      ));
 
   Future<http.Response> exportarMateriasPrimas({String? categoria}) =>
-      download('/api/reportes/materias-primas/excel',
-          query: _filtros(categoria: categoria));
+      download(
+        '/api/reportes/materias-primas/excel',
+        query: _filtros(categoria: categoria),
+      );
 }
