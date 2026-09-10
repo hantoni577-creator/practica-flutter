@@ -33,6 +33,10 @@ class _MisHorasScreenState extends State<MisHorasScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.bgMain, // Fondo oscuro total
+      appBar: AppBar(
+        title: const Text('Historial De Jornadas De Pago'),
+        centerTitle: false,
+      ),
       body: Builder(
         builder: (context) {
           if (horasProv.isLoading && horasProv.jornadas.isEmpty) {

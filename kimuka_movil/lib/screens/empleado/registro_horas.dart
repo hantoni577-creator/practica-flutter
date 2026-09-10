@@ -115,6 +115,10 @@ class _RegistroHorasScreenState extends State<RegistroHorasScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.bgMain, // Soluciona el fondo blanco
+      appBar: AppBar(
+        title: const Text('Registro De Entrada Empleado'),
+        centerTitle: false,
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),

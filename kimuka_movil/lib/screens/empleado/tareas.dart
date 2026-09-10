@@ -65,6 +65,10 @@ class _TareasScreenState extends State<TareasScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.bgMain, // Fondo oscuro
+      appBar: AppBar(
+        title: const Text('Isumos Asignados Para Trabajar '),
+        centerTitle: false,
+      ),
       body: FutureBuilder<List<Asignacion>>(
         future: _futuro,
         builder: (context, snapshot) {

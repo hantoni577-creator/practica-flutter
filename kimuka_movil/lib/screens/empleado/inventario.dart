@@ -34,6 +34,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.bgMain, // Fondo oscuro
+      appBar: AppBar(
+        title: const Text('Materia Prima Disponible'),
+        centerTitle: false,
+      ),
       body: FutureBuilder<List<Insumo>>(
         future: _futuro,
         builder: (context, snapshot) {

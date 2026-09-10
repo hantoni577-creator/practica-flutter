@@ -122,6 +122,19 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
     final List<dynamic> rankingEmpleados =
         (_datos['rankingEmpleados'] as List<dynamic>?) ?? [];
 
+    // Calcular máximo para la escala de las gráficas
+    int maxMateriales = 1;
+    for (final m in rankingMateriales) {
+      final c = (m['count'] as num?)?.toInt() ?? 0;
+      if (c > maxMateriales) maxMateriales = c;
+    }
+
+    int maxEmpleados = 1;
+    for (final e in rankingEmpleados) {
+      final c = (e['count'] as num?)?.toInt() ?? 0;
+      if (c > maxEmpleados) maxEmpleados = c;
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.bgMain,
       appBar: AppBar(title: const Text('Trabajos Más Realizados')),
@@ -137,6 +150,7 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // ENCABEZADO
                   const Text(
                     'Trabajos Más Realizados',
                     textAlign: TextAlign.center,
@@ -150,7 +164,8 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                   const Text(
                     'Materiales más asignados y empleados más activos del sistema Kimuka.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppTheme.textoSecundario, fontSize: 13),
+                    style: TextStyle(
+                        color: AppTheme.textoSecundario, fontSize: 13),
                   ),
                   const SizedBox(height: 20),
 
@@ -165,7 +180,8 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                       padding: const EdgeInsets.all(16),
                       child: LayoutBuilder(
                         builder: (context, boxConstraints) {
-                          final esPantallaAncha = boxConstraints.maxWidth > 850;
+                          final esPantallaAncha =
+                              boxConstraints.maxWidth > 850;
                           return Wrap(
                             spacing: 12,
                             runSpacing: 14,
@@ -182,19 +198,22 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                                     isExpanded: true,
                                     dropdownColor: AppTheme.bgCard,
                                     style: const TextStyle(
-                                        color: AppTheme.textPrimary, fontSize: 13),
+                                        color: AppTheme.textPrimary,
+                                        fontSize: 13),
                                     decoration: _decoracionSelector(),
                                     items: [
                                       const DropdownMenuItem(
                                         value: null,
                                         child: Text('Todos los empleados',
-                                            overflow: TextOverflow.ellipsis),
+                                            overflow:
+                                            TextOverflow.ellipsis),
                                       ),
                                       ..._empleados.map(
                                             (e) => DropdownMenuItem(
                                           value: e.idUsuario,
                                           child: Text(e.nombre,
-                                              overflow: TextOverflow.ellipsis),
+                                              overflow:
+                                              TextOverflow.ellipsis),
                                         ),
                                       ),
                                     ],
@@ -215,19 +234,22 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                                     isExpanded: true,
                                     dropdownColor: AppTheme.bgCard,
                                     style: const TextStyle(
-                                        color: AppTheme.textPrimary, fontSize: 13),
+                                        color: AppTheme.textPrimary,
+                                        fontSize: 13),
                                     decoration: _decoracionSelector(),
                                     items: [
                                       const DropdownMenuItem(
                                         value: null,
                                         child: Text('Todos los meses',
-                                            overflow: TextOverflow.ellipsis),
+                                            overflow:
+                                            TextOverflow.ellipsis),
                                       ),
                                       ..._meses().entries.map(
                                             (e) => DropdownMenuItem(
                                           value: e.key,
                                           child: Text(e.value,
-                                              overflow: TextOverflow.ellipsis),
+                                              overflow:
+                                              TextOverflow.ellipsis),
                                         ),
                                       ),
                                     ],
@@ -248,19 +270,22 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                                     isExpanded: true,
                                     dropdownColor: AppTheme.bgCard,
                                     style: const TextStyle(
-                                        color: AppTheme.textPrimary, fontSize: 13),
+                                        color: AppTheme.textPrimary,
+                                        fontSize: 13),
                                     decoration: _decoracionSelector(),
                                     items: [
                                       const DropdownMenuItem(
                                         value: null,
                                         child: Text('Todos los años',
-                                            overflow: TextOverflow.ellipsis),
+                                            overflow:
+                                            TextOverflow.ellipsis),
                                       ),
                                       ..._anios().map(
                                             (a) => DropdownMenuItem(
                                           value: a,
                                           child: Text(a,
-                                              overflow: TextOverflow.ellipsis),
+                                              overflow:
+                                              TextOverflow.ellipsis),
                                         ),
                                       ),
                                     ],
@@ -281,19 +306,22 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                                     isExpanded: true,
                                     dropdownColor: AppTheme.bgCard,
                                     style: const TextStyle(
-                                        color: AppTheme.textPrimary, fontSize: 13),
+                                        color: AppTheme.textPrimary,
+                                        fontSize: 13),
                                     decoration: _decoracionSelector(),
                                     items: [
                                       const DropdownMenuItem(
                                         value: null,
                                         child: Text('Todos los estados',
-                                            overflow: TextOverflow.ellipsis),
+                                            overflow:
+                                            TextOverflow.ellipsis),
                                       ),
                                       ..._estados.map(
                                             (s) => DropdownMenuItem(
                                           value: s,
                                           child: Text(s,
-                                              overflow: TextOverflow.ellipsis),
+                                              overflow:
+                                              TextOverflow.ellipsis),
                                         ),
                                       ),
                                     ],
@@ -309,29 +337,35 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                                 padding: const EdgeInsets.only(bottom: 2),
                                 child: ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF107C41),
+                                    backgroundColor:
+                                    const Color(0xFF107C41),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 18, vertical: 14),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius:
+                                      BorderRadius.circular(8),
                                     ),
                                   ),
-                                  onPressed: _exportando ? null : _exportarExcel,
+                                  onPressed:
+                                  _exportando ? null : _exportarExcel,
                                   icon: _exportando
                                       ? const SizedBox(
                                     width: 16,
                                     height: 16,
-                                    child: CircularProgressIndicator(
+                                    child:
+                                    CircularProgressIndicator(
                                       strokeWidth: 2,
                                       color: Colors.white,
                                     ),
                                   )
-                                      : const Icon(Icons.download, size: 18),
+                                      : const Icon(Icons.download,
+                                      size: 18),
                                   label: const Text(
                                     'Exportar a Excel',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.bold, fontSize: 13),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13),
                                   ),
                                 ),
                               ),
@@ -357,14 +391,141 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                         child: _tarjetaMetrica(
                           titulo: 'COMPLETADAS',
                           valor: '$completadas',
-                          pie: 'En proceso: $enProceso   |   Pendientes: $pendientes',
+                          pie:
+                          'En proceso: $enProceso   |   Pendientes: $pendientes',
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
 
-                  // TABLA: RANKING DE MATERIALES
+                  // GRÁFICA 1: MATERIALES MÁS ASIGNADOS
+                  Card(
+                    color: AppTheme.bgCard,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: const BorderSide(color: AppTheme.borderColor),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Materiales Más Asignados',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment:
+                                  MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 14,
+                                      height: 10,
+                                      color: const Color(0xFFE74C3C),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'N° de Asignaciones',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.textoSecundario,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          if (rankingMateriales.isEmpty)
+                            const Center(
+                              child: Padding(
+                                padding:
+                                EdgeInsets.symmetric(vertical: 20),
+                                child: Text(
+                                  'Sin registros para graficar',
+                                  style: TextStyle(
+                                      color: AppTheme.textoSecundario),
+                                ),
+                              ),
+                            )
+                          else
+                            ...rankingMateriales.map((m) {
+                              final item = m as Map<String, dynamic>;
+                              final nombre =
+                                  item['nombre']?.toString() ?? '---';
+                              final count =
+                                  (item['count'] as num?)?.toInt() ?? 0;
+                              final ratio = (count / maxMateriales)
+                                  .clamp(0.05, 1.0);
+
+                              return Padding(
+                                padding:
+                                const EdgeInsets.only(bottom: 12),
+                                child: Column(
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          nombre,
+                                          style: const TextStyle(
+                                            color: AppTheme.textPrimary,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        Text(
+                                          '$count',
+                                          style: const TextStyle(
+                                            color: Color(0xFFE74C3C),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    ClipRRect(
+                                      borderRadius:
+                                      BorderRadius.circular(6),
+                                      child: Container(
+                                        height: 14,
+                                        width: double.infinity,
+                                        color: AppTheme.bgInput,
+                                        alignment: Alignment.centerLeft,
+                                        child: FractionallySizedBox(
+                                          widthFactor: ratio,
+                                          child: Container(
+                                            color:
+                                            const Color(0xFFE74C3C),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // TABLA 1: RANKING DE MATERIALES
                   Card(
                     color: AppTheme.bgCard,
                     shape: RoundedRectangleBorder(
@@ -386,7 +547,8 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                           ),
                           const SizedBox(height: 16),
                           if (rankingMateriales.isEmpty)
-                            const SinDatos(mensaje: 'Sin registros de materiales')
+                            const SinDatos(
+                                mensaje: 'Sin registros de materiales')
                           else
                             _construirTabla(
                               columnas: const [
@@ -400,12 +562,15 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                                   .entries
                                   .map<List<String>>((entry) {
                                 final i = entry.key + 1;
-                                final m = entry.value as Map<String, dynamic>;
+                                final m =
+                                entry.value as Map<String, dynamic>;
                                 return [
                                   '$i',
                                   m['nombre']?.toString() ?? '---',
                                   '${m['count'] ?? 0}',
-                                  (m['cantidad'] as num?)?.toStringAsFixed(2) ?? '0.00',
+                                  (m['cantidad'] as num?)
+                                      ?.toStringAsFixed(2) ??
+                                      '0.00',
                                 ];
                               }).toList(),
                             ),
@@ -413,9 +578,135 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 24),
+
+                  // GRÁFICA 2: EMPLEADOS MÁS ACTIVOS
+                  Card(
+                    color: AppTheme.bgCard,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: const BorderSide(color: AppTheme.borderColor),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Empleados Más Activos',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment:
+                                  MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 14,
+                                      height: 10,
+                                      color: const Color(0xFF2ECC71),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'N° de Trabajos',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.textoSecundario,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          if (rankingEmpleados.isEmpty)
+                            const Center(
+                              child: Padding(
+                                padding:
+                                EdgeInsets.symmetric(vertical: 20),
+                                child: Text(
+                                  'Sin registros para graficar',
+                                  style: TextStyle(
+                                      color: AppTheme.textoSecundario),
+                                ),
+                              ),
+                            )
+                          else
+                            ...rankingEmpleados.map((e) {
+                              final item = e as Map<String, dynamic>;
+                              final nombre =
+                                  item['nombre']?.toString() ?? '---';
+                              final count =
+                                  (item['count'] as num?)?.toInt() ?? 0;
+                              final ratio = (count / maxEmpleados)
+                                  .clamp(0.05, 1.0);
+
+                              return Padding(
+                                padding:
+                                const EdgeInsets.only(bottom: 12),
+                                child: Column(
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          nombre,
+                                          style: const TextStyle(
+                                            color: AppTheme.textPrimary,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        Text(
+                                          '$count',
+                                          style: const TextStyle(
+                                            color: Color(0xFF2ECC71),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    ClipRRect(
+                                      borderRadius:
+                                      BorderRadius.circular(6),
+                                      child: Container(
+                                        height: 14,
+                                        width: double.infinity,
+                                        color: AppTheme.bgInput,
+                                        alignment: Alignment.centerLeft,
+                                        child: FractionallySizedBox(
+                                          widthFactor: ratio,
+                                          child: Container(
+                                            color:
+                                            const Color(0xFF2ECC71),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 20),
 
-                  // TABLA: RANKING DE EMPLEADOS
+                  // TABLA 2: RANKING DE EMPLEADOS
                   Card(
                     color: AppTheme.bgCard,
                     shape: RoundedRectangleBorder(
@@ -437,7 +728,8 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                           ),
                           const SizedBox(height: 16),
                           if (rankingEmpleados.isEmpty)
-                            const SinDatos(mensaje: 'Sin registros de empleados')
+                            const SinDatos(
+                                mensaje: 'Sin registros de empleados')
                           else
                             _construirTabla(
                               columnas: const [
@@ -451,7 +743,8 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
                                   .entries
                                   .map<List<String>>((entry) {
                                 final i = entry.key + 1;
-                                final e = entry.value as Map<String, dynamic>;
+                                final e =
+                                entry.value as Map<String, dynamic>;
                                 return [
                                   '$i',
                                   e['nombre']?.toString() ?? '---',
@@ -473,7 +766,8 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
     );
   }
 
-  Widget _selectorConEtiqueta({required String etiqueta, required Widget child}) {
+  Widget _selectorConEtiqueta(
+      {required String etiqueta, required Widget child}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -510,7 +804,8 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
     );
   }
 
-  Widget _tarjetaMetrica({required String titulo, required String valor, String? pie}) {
+  Widget _tarjetaMetrica(
+      {required String titulo, required String valor, String? pie}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
@@ -542,7 +837,8 @@ class _ReporteTrabajosScreenState extends State<ReporteTrabajosScreen> {
             const SizedBox(height: 10),
             Text(
               pie,
-              style: const TextStyle(fontSize: 11, color: AppTheme.textoSecundario),
+              style: const TextStyle(
+                  fontSize: 11, color: AppTheme.textoSecundario),
             ),
           ],
         ],
