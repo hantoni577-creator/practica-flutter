@@ -24,7 +24,7 @@ void main() async {
         Provider<SessionManager>.value(value: session),
         Provider<ApiClient>.value(value: api),
         ChangeNotifierProvider(
-          create: (_) => AuthProvider(session: session, api: api),
+          create: (_) => AuthProvider(session: session, api: api)..init(),
         ),
         ChangeNotifierProvider(
           create: (_) => HorasProvider(api),

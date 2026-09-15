@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../empleado/registro_horas.dart';
 import '../../state/auth_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
@@ -29,17 +30,27 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _ingresar() async {
-    FocusScope.of(context).unfocus();
-    final auth = context.read<AuthProvider>();
-    final ok = await auth.login(_correo.text, _password.text);
-    if (!mounted) return;
-    if (ok) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => HomeShell(user: auth.user!)),
+      FocusScope.of(context).unfocus();
+      final auth = context.read<AuthProvider>();
+      final ok = await auth.login(_correo.text, _password.text);
+      if (!mounted) return;
+      if (ok) {
+        final user = auth.user!;
+        // Si es empleado, va a la pantalla automática de inicio de jornada
+        if (!user.esAdmin) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const RegistroHorasScreen()),
             (route) => false,
-      );
+          );
+        } else {
+          // Administrador va directo a su dashboard
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => HomeShell(user: user)),
+            (route) => false,
+          );
+        }
+      }
     }
-  }
 
   @override
   Widget build(BuildContext context) {
