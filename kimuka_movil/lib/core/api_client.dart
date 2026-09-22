@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -48,6 +49,16 @@ class ApiClient {
     return data;
   }
 
+  Future<http.Response> _enviar(Future<http.Response> peticion) async {
+    try {
+      return await peticion.timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      throw ApiException(
+        'Tiempo de espera agotado. Verifica la conexión con el servidor.',
+      );
+    }
+  }
+
   Future<dynamic> request(
       String endpoint, {
         String method = 'GET',
@@ -58,24 +69,24 @@ class ApiClient {
     final http.Response res;
     switch (method) {
       case 'POST':
-        res = await _client.post(
+        res = await _enviar(_client.post(
           uri,
           headers: _headers(),
           body: jsonEncode(body ?? {}),
-        );
+        ));
         break;
       case 'PUT':
-        res = await _client.put(
+        res = await _enviar(_client.put(
           uri,
           headers: _headers(),
           body: jsonEncode(body ?? {}),
-        );
+        ));
         break;
       case 'DELETE':
-        res = await _client.delete(uri, headers: _headers());
+        res = await _enviar(_client.delete(uri, headers: _headers()));
         break;
       default:
-        res = await _client.get(uri, headers: _headers());
+        res = await _enviar(_client.get(uri, headers: _headers()));
     }
     return _parse(res);
   }
@@ -85,7 +96,8 @@ class ApiClient {
         Map<String, String>? query,
       }) async {
     final uri = Uri.parse('$baseUrl$endpoint').replace(queryParameters: query);
-    final res = await _client.get(uri, headers: _headers(json: false));
+    final res =
+        await _enviar(_client.get(uri, headers: _headers(json: false)));
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException('Error al descargar (${res.statusCode})', res.statusCode);
     }
